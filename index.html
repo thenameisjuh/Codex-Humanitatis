@@ -1,0 +1,64 @@
+/**
+ * Codex Humanitatis - Website Funcional
+ * Mestrado em Humanidades Digitais
+ */
+
+// 1. Função que serve a página principal
+function doGet() {
+  try {
+    // IMPORTANTE: O ficheiro no menu lateral deve chamar-se exatamente "Index.html"
+    // Mas aqui chamamos apenas 'Index'
+    return HtmlService.createTemplateFromFile('Index')
+        .evaluate()
+        .setTitle('Codex Humanitatis | Empresa de HD')
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } catch (e) {
+    return HtmlService.createHtmlOutput("<b>Erro Crítico:</b> O ficheiro 'Index.html' não foi encontrado no projeto. Verifique o nome no menu lateral (deve ter o I maiúsculo).<br><br>Erro: " + e.toString());
+  }
+}
+
+/**
+ * 2. Função que processa o formulário
+ */
+function processForm(formObject) {
+  try {
+    let ss;
+    try {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+      if (!ss) throw new Error();
+    } catch(e) {
+      ss = SpreadsheetApp.create("Contactos_Codex_Humanitatis");
+    }
+    
+    const sheet = ss.getSheets()[0];
+    
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(["Data/Hora", "Nome do Cliente", "Email de Contacto", "Descrição do Projeto"]);
+    }
+    
+    sheet.appendRow([
+      new Date(),
+      formObject.nome,
+      formObject.email,
+      formObject.mensagem
+    ]);
+
+    const adminEmail = Session.getEffectiveUser().getEmail();
+    if (adminEmail) {
+      MailApp.sendEmail({
+        to: adminEmail,
+        subject: "🚀 Novo Contacto: " + formObject.nome,
+        body: "Recebeu uma nova proposta para a Codex Humanitatis.\n\n" +
+              "Nome: " + formObject.nome + "\n" +
+              "Email: " + formObject.email + "\n" +
+              "Mensagem: " + formObject.mensagem + "\n\n" +
+              "Dados: " + ss.getUrl()
+      });
+    }
+
+    return "Mensagem enviada com sucesso! A equipa entrará em contacto em breve.";
+  } catch (error) {
+    return "Erro ao processar: " + error.toString();
+  }
+}
